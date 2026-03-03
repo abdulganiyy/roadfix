@@ -1,0 +1,16 @@
+name: roadfixng-api
+services:
+  postgres:
+    image: postgres
+    container_name: db-roadfixng
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: my_database
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+volumes:
+  postgres_data:

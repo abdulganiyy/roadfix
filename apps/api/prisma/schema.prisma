@@ -1,0 +1,177 @@
+
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ReportStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  IN_PROGRESS
+  FIXED
+}
+
+enum ProblemType {
+  POTHOLE
+  FLOODING
+  BROKEN_ROAD
+  BLOCKED_DRAINAGE
+  TRAFFIC_LIGHT
+  OTHER
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String?  @unique
+  phone         String?  @unique
+  name          String?
+  password      String @unique
+
+  emailVerified           Boolean  @default(false)
+
+  emailOtpHash            String?
+  emailOtpExpiresAt       DateTime?
+
+  otp     String?
+  otpExpiresAt DateTime?
+
+  resetPasswordToken     String?
+  resetPasswordExpiresAt DateTime?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  reports       Report[]
+  userRoles     UserRole[]
+  confirmations ReportConfirmation[]
+}
+
+model Report {
+  id              String        @id @default(uuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+
+  problemType     ProblemType
+  description     String?       @db.VarChar(300)
+
+  latitude        Float
+  longitude       Float
+  gpsAccuracy     Float
+  address         String?
+
+  confidenceScore Float         @default(0)
+
+  status          ReportStatus  @default(PENDING)
+
+  clusterId       String?
+  cluster         LocationCluster? @relation(fields: [clusterId], references: [id])
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  images          ReportImage[]
+  confirmations   ReportConfirmation[]
+  statusHistory   ReportStatusHistory[]
+
+  @@index([latitude, longitude])
+  @@index([status])
+  @@index([clusterId])
+}
+
+model ReportImage {
+  id        String   @id @default(uuid())
+  reportId  String
+  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  url       String
+  hash      String?  // For duplicate image detection
+
+  createdAt DateTime @default(now())
+
+  @@index([hash])
+}
+
+model ReportConfirmation {
+  id        String   @id @default(uuid())
+  reportId  String
+  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([reportId, userId])
+}
+
+model ReportStatusHistory {
+  id        String        @id @default(uuid())
+  reportId  String
+  report    Report        @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  oldStatus ReportStatus
+  newStatus ReportStatus
+
+  changedBy String?       // admin id or system
+  createdAt DateTime      @default(now())
+}
+
+model LocationCluster {
+  id          String   @id @default(uuid())
+
+  latitude    Float
+  longitude   Float
+  radius      Float    @default(20) // meters
+
+  reportCount Int      @default(0)
+
+  createdAt   DateTime @default(now())
+
+  reports     Report[]
+}
+
+model DeviceFingerprint {
+  id        String   @id @default(uuid())
+  deviceHash String  @unique
+  userId    String?
+  createdAt DateTime @default(now())
+}
+
+
+model Role {
+  id    String     @default(uuid()) @id
+  name RoleName    @unique
+
+  userRoles UserRole[]
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model UserRole {
+  id    String     @default(uuid()) @id
+  userId String
+  roleId String
+
+  user  User @relation(fields: [userId], references: [id])
+  role  Role @relation(fields: [roleId], references: [id])
+
+
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([userId, roleId])
+}
+
+enum RoleName {
+  admin
+  staff
+  user
+}
