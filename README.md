@@ -1,6 +1,6 @@
-# Restaurant App
+# Roadfix
 
-This contains the api, admin portal and mobile app
+This contains the backend, dashboard applications.
 
 ## Setup Requirements
 
