@@ -1,4 +1,5 @@
 import axios from "axios";
+export * from "./report";
 
 export const uploadImage = async (file: any) => {
   if (!file) {
@@ -11,8 +12,8 @@ export const uploadImage = async (file: any) => {
 
   formData.append("file", file);
   formData.append("upload_preset", "jrlc8n92");
-  formData.append("tags", "ileiyanbypods");
-  formData.append("folder", "ileiyanbypods");
+  formData.append("tags", "roadfix");
+  formData.append("folder", "roadfix");
   formData.append("api_key", `${process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY}`);
 
   const response = await axios.post(url, formData);

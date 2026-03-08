@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -11,17 +11,17 @@ import {
   Shield,
 } from "lucide-react";
 import Link from "next/link";
-import {MainNavbar} from "@/components/MainNavbar";
+import { MainNavbar } from "@/components/MainNavbar";
 import { Footer } from "@/components/Footer";
 import { useRouter } from "next/navigation";
 
 export default function Home() {
-  const router = useRouter()
+  const router = useRouter();
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Navigation */}
-     <MainNavbar />
+      <MainNavbar />
 
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-20 md:py-32">
@@ -36,15 +36,18 @@ export default function Home() {
               resolved.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <Button onClick={()=>{
-                router.push("/add-report")
-              }} className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-8 py-6">
+              <Button
+                onClick={() => {
+                  router.push("/add-report");
+                }}
+                className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-8 py-6"
+              >
                 Report Now
               </Button>
               <Button
-              onClick={()=>{
-                router.push("/add-report")
-              }}
+                onClick={() => {
+                  router.push("/reports");
+                }}
                 variant="outline"
                 className="border-border hover:bg-card hover:text-card-foreground text-lg px-8 py-6"
               >
@@ -213,7 +216,7 @@ export default function Home() {
       </section> */}
 
       {/* Footer */}
-     <Footer />
+      <Footer />
     </div>
   );
 }

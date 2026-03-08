@@ -53,3 +53,14 @@ export type Order = {
   orderNumber: string;
   status: "pending" | "processing" | "success" | "failed" | any;
 };
+
+export type CreateReport = {
+  latitude: number;
+  longitude: number;
+  gpsAccuracy: number;
+  email?: string;
+  problemType: string;
+  severity: string;
+  userId?: string;
+  description?: string;
+};

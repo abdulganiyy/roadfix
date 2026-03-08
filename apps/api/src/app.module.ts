@@ -13,6 +13,7 @@ import { MailModule } from './mail/mail.module';
 import { StatsModule } from './stats/stats.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { ReportModule } from './report/report.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { APP_GUARD } from '@nestjs/core';
     }),
     MailModule,
     StatsModule,
+    ReportModule,
   ],
   controllers: [AppController],
   providers: [

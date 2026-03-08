@@ -1,145 +1,144 @@
-'use client'
+"use client";
 
-import { useState, useMemo } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { MapPin, AlertCircle, CheckCircle, Clock, ChevronRight, Search, Filter, MapIcon } from 'lucide-react'
-
+import { useState, useMemo, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  MapPin,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  ChevronRight,
+  Search,
+  Filter,
+  MapIcon,
+} from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { fetchReports } from "@/services";
+import {
+  GeoapifyGeocoderAutocomplete,
+  GeoapifyContext,
+} from "@geoapify/react-geocoder-autocomplete";
+import "@geoapify/geocoder-autocomplete/styles/minimal.css";
 interface Report {
-  id: string
-  title: string
-  type: string
-  severity: 'low' | 'medium' | 'high' | 'critical'
-  status: 'reported' | 'in-progress' | 'resolved'
-  location: string
-  date: string
-  description: string
-  upvotes: number
-  image?: string
+  id: string;
+  title: string;
+  problemType: string;
+  severity: "MINOR" | "MODERATE" | "SEVERE" | "CRITICAL";
+  status: "PENDING" | "FIXED" | "VERIFIED" | "REJECTED" | "IN_PROGRESS";
+  address: string;
+  createdAt: string;
+  description: string;
+  upvotes?: number;
+  image?: string;
+  images?: any;
 }
-
-const SAMPLE_REPORTS: Report[] = [
-  {
-    id: '1',
-    title: 'Large pothole on Main Street',
-    type: 'Pothole',
-    severity: 'high',
-    status: 'in-progress',
-    location: '245 Main Street, Downtown',
-    date: '2 hours ago',
-    description: 'Deep pothole causing safety hazard for cyclists and pedestrians',
-    upvotes: 24,
-    image: 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=400&h=300&fit=crop'
-  },
-  {
-    id: '2',
-    title: 'Cracked pavement - Elm Avenue',
-    type: 'Pavement Damage',
-    severity: 'medium',
-    status: 'reported',
-    location: '412 Elm Avenue, Northeast District',
-    date: '4 hours ago',
-    description: 'Multiple cracks forming a pattern, risk of expansion',
-    upvotes: 18,
-    image: 'https://images.unsplash.com/photo-1581092162562-40038f73dfa1?w=400&h=300&fit=crop'
-  },
-  {
-    id: '3',
-    title: 'Missing manhole cover',
-    type: 'Hazard',
-    severity: 'critical',
-    status: 'in-progress',
-    location: '89 Park Road, Central Hub',
-    date: '6 hours ago',
-    description: 'Open manhole creating serious safety risk. Immediate attention required.',
-    upvotes: 42,
-    image: 'https://images.unsplash.com/photo-1581092918187-e02e40f78cc2?w=400&h=300&fit=crop'
-  },
-  {
-    id: '4',
-    title: 'Broken street light pole',
-    type: 'Street Lighting',
-    severity: 'medium',
-    status: 'resolved',
-    location: '567 Oak Street, West End',
-    date: '1 day ago',
-    description: 'Pole leaning at unsafe angle, light no longer functional',
-    upvotes: 15,
-  },
-  {
-    id: '5',
-    title: 'Flooding during rain',
-    type: 'Drainage Issue',
-    severity: 'high',
-    status: 'reported',
-    location: '234 River Lane, Lowland Area',
-    date: '8 hours ago',
-    description: 'Standing water accumulates rapidly, poses traffic hazard',
-    upvotes: 31,
-  },
-  {
-    id: '6',
-    title: 'Damaged storm drain cover',
-    type: 'Storm Drain',
-    severity: 'low',
-    status: 'resolved',
-    location: '123 Pine Street, South District',
-    date: '3 days ago',
-    description: 'Cover cracked but functional, recommend replacement',
-    upvotes: 8,
-  },
-]
 
 const STATUS_CONFIG = {
-  reported: { label: 'Reported', color: 'bg-blue-500/20 text-blue-400', icon: AlertCircle },
-  'in-progress': { label: 'In Progress', color: 'bg-yellow-500/20 text-yellow-400', icon: Clock },
-  resolved: { label: 'Resolved', color: 'bg-green-500/20 text-green-400', icon: CheckCircle },
-}
+  PENDING: {
+    label: "Reported",
+    color: "bg-blue-500/20 text-blue-400",
+    icon: AlertCircle,
+  },
+  IN_PROGRESS: {
+    label: "In Progress",
+    color: "bg-yellow-500/20 text-yellow-400",
+    icon: Clock,
+  },
+  FIXED: {
+    label: "Fixed",
+    color: "bg-green-500/20 text-green-400",
+    icon: CheckCircle,
+  },
+  VERIFIED: {
+    label: "Verified",
+    color: "bg-brown-500/20 text-brown-400",
+    icon: CheckCircle,
+  },
+  REJECTED: {
+    label: "Rejected",
+    color: "bg-red-500/20 text-red-400",
+    icon: CheckCircle,
+  },
+};
 
 const SEVERITY_CONFIG = {
-  low: { label: 'Low', color: 'border-blue-500/30' },
-  medium: { label: 'Medium', color: 'border-yellow-500/30' },
-  high: { label: 'High', color: 'border-orange-500/30' },
-  critical: { label: 'Critical', color: 'border-red-500/30' },
-}
+  MINOR: { label: "Low", color: "border-blue-500/30" },
+  MODERATE: { label: "Medium", color: "border-yellow-500/30" },
+  SEVERE: { label: "High", color: "border-orange-500/30" },
+  CRITICAL: { label: "Critical", color: "border-red-500/30" },
+};
+
+const types = [
+  "POTHOLE",
+  "FLOODING",
+  "BROKEN_ROAD",
+  "BLOCKED_DRAINAGE",
+  "TRAFFIC_LIGHT",
+  "OTHER",
+];
+
+const statuses = ["PENDING", "FIXED", "VERIFIED", "REJECTED", "IN_PROGRESS"];
 
 export default function ReportsPage() {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [filterType, setFilterType] = useState<string | null>(null)
-  const [filterStatus, setFilterStatus] = useState<string | null>(null)
-  const [sortBy, setSortBy] = useState<'recent' | 'upvotes'>('recent')
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [severity, setSeverity] = useState("");
+  const [lng, setLng] = useState<number | undefined>(0);
+  const [lat, setLat] = useState<number | undefined>(0);
+  const [problemType, setProblemType] = useState("");
+  const [sort, setSort] = useState("createdAt");
+  const [order, setOrder] = useState("desc");
 
-  const filteredAndSortedReports = useMemo(() => {
-    let filtered = SAMPLE_REPORTS
-
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(
-        r =>
-          r.title.toLowerCase().includes(query) ||
-          r.location.toLowerCase().includes(query) ||
-          r.description.toLowerCase().includes(query)
-      )
+  useEffect(() => {
+    if (!searchQuery) {
+      setLat(undefined);
+      setLng(undefined);
     }
+  }, [searchQuery]);
 
-    if (filterType) {
-      filtered = filtered.filter(r => r.type === filterType)
-    }
+  const onPlaceSelected = (feature: any) => {
+    setSearchQuery(feature?.properties?.formatted);
+    setLng(feature?.geometry.coordinates[0]);
+    setLat(feature?.geometry.coordinates[1]);
+  };
 
-    if (filterStatus) {
-      filtered = filtered.filter(r => r.status === filterStatus)
-    }
+  const params = {
+    page,
+    limit: 10,
+    severity,
+    problemType,
+    sort,
+    order,
+    lng,
+    lat,
+  };
 
-    if (sortBy === 'upvotes') {
-      filtered.sort((a, b) => b.upvotes - a.upvotes)
-    }
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ["reports", params],
+    queryFn: () => fetchReports(params),
+  });
 
-    return filtered
-  }, [searchQuery, filterType, filterStatus, sortBy])
+  if (isLoading)
+    return (
+      <div className="flex justify-center items-center h-64">
+        Loading reports...
+      </div>
+    );
 
-  const types = Array.from(new Set(SAMPLE_REPORTS.map(r => r.type)))
-  const statuses = ['reported', 'in-progress', 'resolved']
+  if (isError)
+    return (
+      <div className="flex flex-col items-center gap-3 text-red-500 h-64 justify-center">
+        <p>Failed to load reports</p>
+        <p>{error?.message}</p>
+
+        <button onClick={() => refetch()}>Retry</button>
+      </div>
+    );
+
+  const reports = data?.data;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -150,11 +149,13 @@ export default function ReportsPage() {
             <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
               <MapPin className="w-5 h-5 text-accent-foreground" />
             </div>
-            <span className="text-xl font-bold">RoadWatch</span>
+            <span className="text-xl font-bold">RoadFix</span>
           </a>
           <div className="flex items-center gap-4">
-            <a href="/report" className="hidden sm:inline-block">
-              <Button className="bg-accent hover:bg-accent/90 text-accent-foreground">Report Issue</Button>
+            <a href="/add-report" className="hidden sm:inline-block">
+              <Button className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                Report Issue
+              </Button>
             </a>
           </div>
         </div>
@@ -163,24 +164,32 @@ export default function ReportsPage() {
       <main className="container mx-auto px-4 py-12">
         {/* Header */}
         <div className="mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-balance">Community Road Reports</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-balance">
+            Community Road Reports
+          </h1>
           <p className="text-xl text-muted-foreground max-w-2xl">
-            Track ongoing road repairs and contribute to keeping your community safe
+            Track ongoing road repairs and contribute to keeping your community
+            safe
           </p>
         </div>
 
         {/* Search and Filters */}
         <div className="space-y-6 mb-8">
           {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
-            <Input
-              placeholder="Search by title, location, or description..."
-              className="pl-10"
+
+          <GeoapifyContext
+            apiKey={`${process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY}`}
+          >
+            <GeoapifyGeocoderAutocomplete
+              placeholder="Enter address here"
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              lang="en"
+              limit={8}
+              debounceDelay={1000}
+              addDetails={true}
+              placeSelect={onPlaceSelected}
             />
-          </div>
+          </GeoapifyContext>
 
           {/* Filter and Sort Controls */}
           <div className="grid md:grid-cols-4 gap-4">
@@ -192,23 +201,23 @@ export default function ReportsPage() {
               </label>
               <div className="space-y-2">
                 <button
-                  onClick={() => setFilterType(null)}
+                  onClick={() => setProblemType("")}
                   className={`w-full text-left px-3 py-2 rounded-lg transition ${
-                    filterType === null
-                      ? 'bg-accent text-accent-foreground'
-                      : 'bg-card hover:bg-card/80 text-foreground'
+                    problemType === null
+                      ? "bg-accent text-accent-foreground"
+                      : "bg-card hover:bg-card/80 text-foreground"
                   }`}
                 >
                   All Types
                 </button>
-                {types.map(type => (
+                {types.map((type) => (
                   <button
                     key={type}
-                    onClick={() => setFilterType(type)}
+                    onClick={() => setProblemType(type)}
                     className={`w-full text-left px-3 py-2 rounded-lg transition ${
-                      filterType === type
-                        ? 'bg-accent text-accent-foreground'
-                        : 'bg-card hover:bg-card/80 text-foreground'
+                      problemType === type
+                        ? "bg-accent text-accent-foreground"
+                        : "bg-card hover:bg-card/80 text-foreground"
                     }`}
                   >
                     {type}
@@ -228,20 +237,20 @@ export default function ReportsPage() {
                   onClick={() => setFilterStatus(null)}
                   className={`w-full text-left px-3 py-2 rounded-lg transition ${
                     filterStatus === null
-                      ? 'bg-accent text-accent-foreground'
-                      : 'bg-card hover:bg-card/80 text-foreground'
+                      ? "bg-accent text-accent-foreground"
+                      : "bg-card hover:bg-card/80 text-foreground"
                   }`}
                 >
                   All Status
                 </button>
-                {statuses.map(status => (
+                {statuses.map((status) => (
                   <button
                     key={status}
                     onClick={() => setFilterStatus(status)}
                     className={`w-full text-left px-3 py-2 rounded-lg transition ${
                       filterStatus === status
-                        ? 'bg-accent text-accent-foreground'
-                        : 'bg-card hover:bg-card/80 text-foreground'
+                        ? "bg-accent text-accent-foreground"
+                        : "bg-card hover:bg-card/80 text-foreground"
                     }`}
                   >
                     {STATUS_CONFIG[status as keyof typeof STATUS_CONFIG].label}
@@ -252,24 +261,26 @@ export default function ReportsPage() {
 
             {/* Sort */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Sort By</label>
+              <label className="text-sm font-medium text-muted-foreground">
+                Sort By
+              </label>
               <div className="space-y-2">
                 <button
-                  onClick={() => setSortBy('recent')}
+                  onClick={() => setSort("createdAt")}
                   className={`w-full text-left px-3 py-2 rounded-lg transition ${
-                    sortBy === 'recent'
-                      ? 'bg-accent text-accent-foreground'
-                      : 'bg-card hover:bg-card/80 text-foreground'
+                    sort === "recent"
+                      ? "bg-accent text-accent-foreground"
+                      : "bg-card hover:bg-card/80 text-foreground"
                   }`}
                 >
                   Most Recent
                 </button>
                 <button
-                  onClick={() => setSortBy('upvotes')}
+                  onClick={() => setSort("upvotes")}
                   className={`w-full text-left px-3 py-2 rounded-lg transition ${
-                    sortBy === 'upvotes'
-                      ? 'bg-accent text-accent-foreground'
-                      : 'bg-card hover:bg-card/80 text-foreground'
+                    sort === "upvotes"
+                      ? "bg-accent text-accent-foreground"
+                      : "bg-card hover:bg-card/80 text-foreground"
                   }`}
                 >
                   Most Upvoted
@@ -279,16 +290,18 @@ export default function ReportsPage() {
 
             {/* Stats */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Summary</label>
+              <label className="text-sm font-medium text-muted-foreground">
+                Summary
+              </label>
               <div className="bg-card border border-border rounded-lg p-4 space-y-2">
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-muted-foreground">Total Reports:</span>
-                  <span className="font-semibold">{filteredAndSortedReports.length}</span>
+                  <span className="font-semibold">{reports?.length || 0}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-muted-foreground">Resolved:</span>
                   <span className="font-semibold text-green-400">
-                    {filteredAndSortedReports.filter(r => r.status === 'resolved').length}
+                    {reports.filter((r: Report) => r.status === "FIXED").length}
                   </span>
                 </div>
               </div>
@@ -298,19 +311,21 @@ export default function ReportsPage() {
 
         {/* Reports Grid */}
         <div className="space-y-4">
-          {filteredAndSortedReports.length === 0 ? (
+          {reports.length === 0 ? (
             <Card className="border-border">
               <div className="p-12 text-center">
                 <MapIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
                 <h3 className="text-lg font-semibold mb-2">No reports found</h3>
-                <p className="text-muted-foreground">Try adjusting your search or filters</p>
+                <p className="text-muted-foreground">
+                  Try adjusting your search or filters
+                </p>
               </div>
             </Card>
           ) : (
-            filteredAndSortedReports.map(report => {
-              const statusConfig = STATUS_CONFIG[report.status]
-              const severityConfig = SEVERITY_CONFIG[report.severity]
-              const StatusIcon = statusConfig.icon
+            reports.map((report: Report) => {
+              const statusConfig = STATUS_CONFIG[report.status];
+              const severityConfig = SEVERITY_CONFIG[report.severity];
+              const StatusIcon = statusConfig.icon;
 
               return (
                 <Card
@@ -322,10 +337,12 @@ export default function ReportsPage() {
                       <div className="flex-1 space-y-3">
                         <div className="flex items-start gap-3">
                           <div className="flex-1">
-                            <h3 className="text-lg font-semibold group-hover:text-accent transition">{report.title}</h3>
+                            <h3 className="text-lg font-semibold group-hover:text-accent transition">
+                              {report.title}
+                            </h3>
                             <div className="flex flex-wrap gap-2 mt-2">
                               <span className="text-xs bg-background px-2 py-1 rounded border border-border/50">
-                                {report.type}
+                                {report.problemType}
                               </span>
                               <span
                                 className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${statusConfig.color}`}
@@ -342,21 +359,27 @@ export default function ReportsPage() {
 
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <MapPin className="w-4 h-4" />
-                          <span className="text-sm">{report.location}</span>
+                          <span className="text-sm">{report.address}</span>
                         </div>
 
-                        <p className="text-muted-foreground text-sm line-clamp-2">{report.description}</p>
+                        <p className="text-muted-foreground text-sm line-clamp-2">
+                          {report.description}
+                        </p>
 
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>{report.date}</span>
-                          <span>👍 {report.upvotes} supports</span>
+                          <span>
+                            {new Intl.DateTimeFormat().format(
+                              new Date(report.createdAt),
+                            )}
+                          </span>
+                          <span>👍 {report.upvotes || 0} supports</span>
                         </div>
                       </div>
 
-                      {report.image && (
+                      {report.images && (
                         <div className="hidden sm:block">
                           <img
-                            src={report.image}
+                            src={report.images[0].url}
                             alt={report.title}
                             className="w-24 h-24 rounded-lg object-cover border border-border"
                           />
@@ -369,11 +392,11 @@ export default function ReportsPage() {
                     </div>
                   </div>
                 </Card>
-              )
+              );
             })
           )}
         </div>
       </main>
     </div>
-  )
+  );
 }

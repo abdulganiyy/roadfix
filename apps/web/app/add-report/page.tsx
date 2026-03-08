@@ -1,5 +1,5 @@
 "use client";
-
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,25 +29,30 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useGeolocation } from "@/hooks/user-geolocation";
+import { MainNavbar } from "@/components/MainNavbar";
+import { Footer } from "@/components/Footer";
+import { uploadImage } from "@/services";
+import Image from "next/image";
 
 const formSchema = z.object({
-  issueType: z.string(),
+  title: z.string(),
+  problemType: z.string(),
   severity: z.string(),
-  location: z.string(),
-  description: z.string(),
-  email: z.string(),
+  description: z.string().optional(),
+  email: z.string().optional(),
   photo: z.string(),
 });
 
 export default function ReportPage() {
+  const [isUploading, setIsUploading] = useState(false);
+
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema as any),
     defaultValues: {
-      issueType: "",
+      problemType: "",
       severity: "",
-      location: "",
       description: "",
       email: "",
       photo: "",
@@ -58,13 +63,14 @@ export default function ReportPage() {
     useGeolocation();
 
   const mutation = useMutation({
-    mutationFn: async (data: z.infer<typeof formSchema>) => {
+    mutationFn: async (data: any) => {
       const res = await axios.post("/api/report", data);
 
       return res.data;
     },
     onSuccess: () => {
-      //   router.replace("/dashboard");
+      toast.success("Report submitted successfully");
+      form.reset();
     },
     onError: (err: any) => {
       toast.error(err?.response?.data?.message);
@@ -72,36 +78,33 @@ export default function ReportPage() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(JSON.stringify(values));
-    // mutation.mutate(values);
+    // console.log(JSON.stringify(values));
+    mutation.mutate({ ...values, longitude, latitude, gpsAccuracy: accuracy });
   }
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {};
+  const handleImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement | null>,
+  ) => {
+    const file = e.target.files?.[0];
+    setIsUploading(true);
+
+    try {
+      const { secure_url } = await uploadImage(file);
+
+      form.setValue("photo", secure_url);
+    } catch (error) {
+      toast.error("Error uploading image");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Navigation */}
-      <nav className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <a
-            href="/"
-            className="flex items-center gap-2 hover:opacity-80 transition"
-          >
-            <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
-              <MapPin className="w-5 h-5 text-accent-foreground" />
-            </div>
-            <span className="text-xl font-bold">RoadFix</span>
-          </a>
-          <Button variant="outline" className="border-border hover:bg-card">
-            Back to Home
-          </Button>
-        </div>
-      </nav>
+      <MainNavbar />
 
-      {/* Main Content */}
       <main className="container mx-auto px-4 py-12 md:py-20">
         <div className="max-w-2xl mx-auto">
-          {/* Header */}
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold mb-4 text-balance">
               Report a Road Problem
@@ -116,29 +119,61 @@ export default function ReportPage() {
             {status === "idle" && (
               <Button
                 onClick={requestLocation}
-                className="w-full bg-accent hover:bg-accent/90 text-accent-foreground text-lg py-6 font-semibold"
+                className="mb-8 w-full bg-accent hover:bg-accent/90 text-accent-foreground text-lg py-6 font-semibold"
               >
                 Start Location Verification
               </Button>
             )}
 
-            {status === "checking-permission" && <p>Checking permission...</p>}
-            {status === "requesting" && <p>Detecting location...</p>}
-
-            {status === "granted" && (
-              <div>
-                <p>Latitude: {latitude}</p>
-                <p>Longitude: {longitude}</p>
-                <p>Accuracy: {accuracy?.toFixed(2)} meters</p>
+            {status === "checking-permission" && (
+              <div className="mb-8 p-6 bg-accent/10 border border-accent/30 rounded-xl flex gap-4 items-start animate-in fade-in duration-300">
+                <CheckCircle2 className="w-6 h-6 text-accent shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-muted-foreground">
+                    Checking permissions...
+                  </p>
+                </div>
+              </div>
+            )}
+            {status === "requesting" && (
+              <div className="mb-8 p-6 bg-accent/10 border border-accent/30 rounded-xl flex gap-4 items-start animate-in fade-in duration-300">
+                <CheckCircle2 className="w-6 h-6 text-accent shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-muted-foreground">Detecting location...</p>
+                </div>
               </div>
             )}
 
-            {status === "denied" && <p style={{ color: "red" }}>{error}</p>}
+            {status === "granted" && (
+              <div className="mb-8 p-6 bg-accent/10 border border-accent/30 rounded-xl flex gap-4 items-start animate-in fade-in duration-300">
+                <CheckCircle2 className="w-6 h-6 text-accent shrink-0 mt-0.5" />
+                <div>
+                  <p>Latitude: {latitude}</p>
+                  <p>Longitude: {longitude}</p>
+                  <p>Accuracy: {accuracy?.toFixed(2)} meters</p>
+                </div>
+              </div>
+            )}
 
-            {status === "error" && <p style={{ color: "orange" }}>{error}</p>}
+            {status === "denied" && (
+              <div className="mb-8 p-6 bg-red-100 border border-red-500 rounded-xl flex gap-4 items-start animate-in fade-in duration-300">
+                <CheckCircle2 className="w-6 h-6 text-red-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-red-600">{error}</p>
+                </div>
+              </div>
+            )}
+
+            {status === "error" && (
+              <div className="mb-8 p-6 bg-orange-100 border border-orange-500 rounded-xl flex gap-4 items-start animate-in fade-in duration-300">
+                <CheckCircle2 className="w-6 h-6 text-orange-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-orange-600">{error}</p>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Success Message */}
           {/* {submitted && (
             <div className="mb-8 p-6 bg-accent/10 border border-accent/30 rounded-xl flex gap-4 items-start animate-in fade-in duration-300">
               <CheckCircle2 className="w-6 h-6 text-accent shrink-0 mt-0.5" />
@@ -149,7 +184,6 @@ export default function ReportPage() {
             </div>
           )} */}
 
-          {/* Form Card */}
           {status === "granted" && (
             <Card className="bg-card border-border p-8">
               <Form {...form}>
@@ -157,14 +191,32 @@ export default function ReportPage() {
                   onSubmit={form.handleSubmit(onSubmit)}
                   className="space-y-8"
                 >
-                  {/* Issue Type */}
                   <FormField
                     control={form.control}
-                    name="issueType"
+                    name="title"
                     render={({ field }) => (
                       <FormItem className="space-y-3">
                         <FormLabel className="text-base font-semibold">
-                          {" "}
+                          Title
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Enter title for the problem you are reporting"
+                            {...field}
+                            className="border-border bg-background text-foreground"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  {/* Issue Type */}
+                  <FormField
+                    control={form.control}
+                    name="problemType"
+                    render={({ field }) => (
+                      <FormItem className="space-y-3">
+                        <FormLabel className="text-base font-semibold">
                           What type of issue did you find?
                         </FormLabel>
                         <FormControl>
@@ -176,20 +228,17 @@ export default function ReportPage() {
                               <SelectValue placeholder="Select an issue type" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="pothole">Pothole</SelectItem>
-                              <SelectItem value="crack">
-                                Cracked Pavement
-                              </SelectItem>
-                              <SelectItem value="flooding">
+                              <SelectItem value="POTHOLE">Pothole</SelectItem>
+                              <SelectItem value="FLOODING">
                                 Flooding/Water Damage
                               </SelectItem>
-                              <SelectItem value="debris">
-                                Debris or Obstruction
+                              <SelectItem value="BLOCKED_DRAINAGE">
+                                Blocked Drainage
                               </SelectItem>
-                              <SelectItem value="sign">
-                                Damaged Sign or Marking
+                              <SelectItem value="TRAFFIC_LIGHT">
+                                Damaged Traffic Sign or Marking
                               </SelectItem>
-                              <SelectItem value="other">
+                              <SelectItem value="OTHER">
                                 Other Damage
                               </SelectItem>
                             </SelectContent>
@@ -218,16 +267,16 @@ export default function ReportPage() {
                               <SelectValue placeholder="Select severity level" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="minor">
+                              <SelectItem value="MINOR">
                                 Minor (Cosmetic)
                               </SelectItem>
-                              <SelectItem value="moderate">
+                              <SelectItem value="MODERATE">
                                 Moderate (Risky)
                               </SelectItem>
-                              <SelectItem value="severe">
+                              <SelectItem value="SEVERE">
                                 Severe (Hazardous)
                               </SelectItem>
-                              <SelectItem value="critical">
+                              <SelectItem value="CRITICAL">
                                 Critical (Dangerous)
                               </SelectItem>
                             </SelectContent>
@@ -237,27 +286,7 @@ export default function ReportPage() {
                       </FormItem>
                     )}
                   />
-                  {/* Location */}
-                  <FormField
-                    control={form.control}
-                    name="location"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-base font-semibold">
-                          {" "}
-                          Location
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Street name, intersection, or address"
-                            {...field}
-                            className="border-border bg-background text-foreground h-11"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+
                   {/* Description */}
                   <FormField
                     control={form.control}
@@ -265,7 +294,6 @@ export default function ReportPage() {
                     render={({ field }) => (
                       <FormItem className="space-y-3">
                         <FormLabel className="text-base font-semibold">
-                          {" "}
                           Describe the problem
                         </FormLabel>
                         <FormControl>
@@ -287,7 +315,6 @@ export default function ReportPage() {
                     render={({ field }) => (
                       <FormItem className="space-y-3">
                         <FormLabel className="text-base font-semibold">
-                          {" "}
                           Upload a photo
                         </FormLabel>
                         <FormControl>
@@ -298,7 +325,8 @@ export default function ReportPage() {
                               type="file"
                               capture="environment"
                               accept="image/*"
-                              onChange={handleFileChange}
+                              disabled={isUploading}
+                              onChange={handleImageUpload}
                               className="hidden"
                             />
                             <label
@@ -307,17 +335,25 @@ export default function ReportPage() {
                             >
                               <Upload className="w-8 h-8 text-accent" />
                               <div className="text-center">
-                                <p className="font-semibold">
+                                <p className="font-semibold truncate w-64">
                                   {field.value
                                     ? field.value
                                     : "Click to upload a photo from camera"}
                                 </p>
-                                {/* <p className="text-sm text-muted-foreground">or drag and drop</p> */}
                               </div>
                             </label>
                           </div>
                         </FormControl>
                         <FormMessage />
+                        {isUploading && <div>Uploading image...</div>}
+                        {form.getValues("photo") && (
+                          <Image
+                            alt="location-image"
+                            src={form.getValues("photo")}
+                            height={200}
+                            width={200}
+                          />
+                        )}
                       </FormItem>
                     )}
                   />
@@ -337,7 +373,7 @@ export default function ReportPage() {
                               {...field}
                               className="border-border bg-background text-foreground h-11"
                             />
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm text-muted-foreground mt-4">
                               We'll send you updates when your report is
                               reviewed.
                             </p>
@@ -348,14 +384,14 @@ export default function ReportPage() {
                     )}
                   />
                   {/* Info Box */}
-                  <div className="p-4 bg-card/50 border border-border rounded-lg flex gap-3">
+                  {/* <div className="p-4 bg-card/50 border border-border rounded-lg flex gap-3">
                     <AlertCircle className="w-5 h-5 text-accent shrink-0 mt-0.5" />
                     <p className="text-sm text-muted-foreground">
                       All reports are reviewed by our team and shared with local
                       authorities. Your report helps us prioritize road
                       maintenance and keep communities safe.
                     </p>
-                  </div>
+                  </div> */}
 
                   {/* Submit Button */}
                   <Button
@@ -370,7 +406,6 @@ export default function ReportPage() {
             </Card>
           )}
 
-          {/* Additional Info */}
           <div className="mt-12 grid md:grid-cols-3 gap-6">
             {[
               {
@@ -400,12 +435,7 @@ export default function ReportPage() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-border mt-20 py-8 bg-card/30">
-        <div className="container mx-auto px-4 text-center text-muted-foreground text-sm">
-          <p>&copy; 2026 RoadFix. Helping communities keep roads safe.</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
