@@ -1,9 +1,7 @@
 import { api } from "@/utils/api";
 
 type RouteContext = {
-  params: {
-    id: string;
-  };
+  params: Promise<{ id: string }>;
 };
 
 export async function GET(request: Request, { params }: RouteContext) {
