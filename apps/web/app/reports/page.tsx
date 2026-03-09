@@ -1,19 +1,9 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import {
-  MapPin,
-  AlertCircle,
-  CheckCircle,
-  Clock,
-  ChevronRight,
-  Search,
-  Filter,
-  MapIcon,
-} from "lucide-react";
+import { MapPin, ChevronRight, Filter, MapIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchReports } from "@/services";
 import {
@@ -21,65 +11,9 @@ import {
   GeoapifyContext,
 } from "@geoapify/react-geocoder-autocomplete";
 import "@geoapify/geocoder-autocomplete/styles/minimal.css";
-interface Report {
-  id: string;
-  title: string;
-  problemType: string;
-  severity: "MINOR" | "MODERATE" | "SEVERE" | "CRITICAL";
-  status: "PENDING" | "FIXED" | "VERIFIED" | "REJECTED" | "IN_PROGRESS";
-  address: string;
-  createdAt: string;
-  description: string;
-  upvotes?: number;
-  image?: string;
-  images?: any;
-}
-
-const STATUS_CONFIG = {
-  PENDING: {
-    label: "Reported",
-    color: "bg-blue-500/20 text-blue-400",
-    icon: AlertCircle,
-  },
-  IN_PROGRESS: {
-    label: "In Progress",
-    color: "bg-yellow-500/20 text-yellow-400",
-    icon: Clock,
-  },
-  FIXED: {
-    label: "Fixed",
-    color: "bg-green-500/20 text-green-400",
-    icon: CheckCircle,
-  },
-  VERIFIED: {
-    label: "Verified",
-    color: "bg-brown-500/20 text-brown-400",
-    icon: CheckCircle,
-  },
-  REJECTED: {
-    label: "Rejected",
-    color: "bg-red-500/20 text-red-400",
-    icon: CheckCircle,
-  },
-};
-
-const SEVERITY_CONFIG = {
-  MINOR: { label: "Low", color: "border-blue-500/30" },
-  MODERATE: { label: "Medium", color: "border-yellow-500/30" },
-  SEVERE: { label: "High", color: "border-orange-500/30" },
-  CRITICAL: { label: "Critical", color: "border-red-500/30" },
-};
-
-const types = [
-  "POTHOLE",
-  "FLOODING",
-  "BROKEN_ROAD",
-  "BLOCKED_DRAINAGE",
-  "TRAFFIC_LIGHT",
-  "OTHER",
-];
-
-const statuses = ["PENDING", "FIXED", "VERIFIED", "REJECTED", "IN_PROGRESS"];
+import Link from "next/link";
+import { Report } from "@/types";
+import { STATUS_CONFIG, SEVERITY_CONFIG, types, statuses } from "@/constants";
 
 export default function ReportsPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -332,65 +266,67 @@ export default function ReportsPage() {
                   key={report.id}
                   className={`border-l-4 ${severityConfig.color} hover:bg-card/80 transition cursor-pointer group`}
                 >
-                  <div className="p-6">
-                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                      <div className="flex-1 space-y-3">
-                        <div className="flex items-start gap-3">
-                          <div className="flex-1">
-                            <h3 className="text-lg font-semibold group-hover:text-accent transition">
-                              {report.title}
-                            </h3>
-                            <div className="flex flex-wrap gap-2 mt-2">
-                              <span className="text-xs bg-background px-2 py-1 rounded border border-border/50">
-                                {report.problemType}
-                              </span>
-                              <span
-                                className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${statusConfig.color}`}
-                              >
-                                <StatusIcon className="w-3 h-3" />
-                                {statusConfig.label}
-                              </span>
-                              <span className="text-xs bg-background px-2 py-1 rounded border border-border/50">
-                                {SEVERITY_CONFIG[report.severity].label}
-                              </span>
+                  <Link href={`/reports/${report.id}`}>
+                    <div className="p-6">
+                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                        <div className="flex-1 space-y-3">
+                          <div className="flex items-start gap-3">
+                            <div className="flex-1">
+                              <h3 className="text-lg font-semibold group-hover:text-accent transition">
+                                {report.title}
+                              </h3>
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                <span className="text-xs bg-background px-2 py-1 rounded border border-border/50">
+                                  {report.problemType}
+                                </span>
+                                <span
+                                  className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${statusConfig.color}`}
+                                >
+                                  <StatusIcon className="w-3 h-3" />
+                                  {statusConfig.label}
+                                </span>
+                                <span className="text-xs bg-background px-2 py-1 rounded border border-border/50">
+                                  {SEVERITY_CONFIG[report.severity].label}
+                                </span>
+                              </div>
                             </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <MapPin className="w-4 h-4" />
+                            <span className="text-sm">{report.address}</span>
+                          </div>
+
+                          <p className="text-muted-foreground text-sm line-clamp-2">
+                            {report.description}
+                          </p>
+
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span>
+                              {new Intl.DateTimeFormat().format(
+                                new Date(report.createdAt),
+                              )}
+                            </span>
+                            <span>👍 {report.upvotes || 0} supports</span>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <MapPin className="w-4 h-4" />
-                          <span className="text-sm">{report.address}</span>
+                        {report.images && (
+                          <div className="hidden sm:block">
+                            <img
+                              src={report.images[0].url}
+                              alt={report.title}
+                              className="w-24 h-24 rounded-lg object-cover border border-border"
+                            />
+                          </div>
+                        )}
+
+                        <div className="flex items-center">
+                          <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-accent transition" />
                         </div>
-
-                        <p className="text-muted-foreground text-sm line-clamp-2">
-                          {report.description}
-                        </p>
-
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>
-                            {new Intl.DateTimeFormat().format(
-                              new Date(report.createdAt),
-                            )}
-                          </span>
-                          <span>👍 {report.upvotes || 0} supports</span>
-                        </div>
-                      </div>
-
-                      {report.images && (
-                        <div className="hidden sm:block">
-                          <img
-                            src={report.images[0].url}
-                            alt={report.title}
-                            className="w-24 h-24 rounded-lg object-cover border border-border"
-                          />
-                        </div>
-                      )}
-
-                      <div className="flex items-center">
-                        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-accent transition" />
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 </Card>
               );
             })

@@ -84,6 +84,9 @@ export class ReportService {
       where: {
         id,
       },
+      include: {
+        images: true,
+      },
     });
   }
 }

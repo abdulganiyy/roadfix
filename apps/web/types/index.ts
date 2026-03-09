@@ -64,3 +64,35 @@ export type CreateReport = {
   userId?: string;
   description?: string;
 };
+
+export interface Report {
+  id: string;
+  title: string;
+  problemType: string;
+  severity: "MINOR" | "MODERATE" | "SEVERE" | "CRITICAL";
+  status: "PENDING" | "FIXED" | "VERIFIED" | "REJECTED" | "IN_PROGRESS";
+  address: string;
+  createdAt: string;
+  description: string;
+  upvotes?: number;
+  image?: string;
+  images?: any;
+  views?: number;
+  comments?: number;
+  timeline?: TimelineEvent[];
+  submittedBy?: string;
+}
+
+export interface TimelineEvent {
+  date: string;
+  status: string;
+  description: string;
+}
+
+export interface Comment {
+  id: string;
+  author: string;
+  content: string;
+  date: string;
+  upvotes: number;
+}
