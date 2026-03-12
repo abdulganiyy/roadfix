@@ -5,9 +5,9 @@ import * as argon2 from 'argon2';
 const prisma = new PrismaService();
 
 async function main() {
-  const adminPassword = await argon2.hash('pass');
+  const adminPassword = await argon2.hash(process.env.ADMIN_PASSWORD!);
 
-  const userPassword = await argon2.hash('pass');
+  const userPassword = await argon2.hash(process.env.USER_PASSWORD!);
 
   const roles = [RoleName.admin, RoleName.staff, RoleName.user];
 
@@ -20,10 +20,10 @@ async function main() {
 
   // Create an admin user using upsert for idempotency
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@roadfixng.com' },
+    where: { email: process.env.ADMIN_EMAIL! },
     update: {}, // empty update if the record already exists
     create: {
-      email: 'admin@roadfixng.com',
+      email: process.env.ADMIN_EMAIL!,
       password: adminPassword,
     },
   });
@@ -32,11 +32,11 @@ async function main() {
   // Create an reporter user using upsert for idempotency
   const reporter = await prisma.user.upsert({
     where: {
-      email: 'reporter@roadfixng.com',
+      email: process.env.USER_EMAIL!,
     },
     update: {}, // empty update if the record already exists
     create: {
-      email: 'reporter@roadfixng.com',
+      email: process.env.USER_EMAIL!,
       password: userPassword,
       emailVerified: true,
       name: 'Abdul Wright',
